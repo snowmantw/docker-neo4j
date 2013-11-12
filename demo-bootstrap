@@ -1,0 +1,19 @@
+#!/bin/bash
+DOCKER=snowmantw/$3
+HOSTPOSTFIX=$2
+HOSTPREFIX=$1
+CONTROLLER=`/sbin/ifconfig docker | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+CID=$(sudo docker run -h $HOSTPREFIX-$HOSTPOSTFIX -dns $CONTROLLER -dns 168.95.1.1 -d -i -t $DOCKER)
+IP=`sudo docker inspect $CID | grep IPAddress | cut -d '"' -f 4`
+SUBSIP="sed -i 's/^.* $HOSTPREFIX-$HOSTPOSTFIX/$IP $HOSTPREFIX-$HOSTPOSTFIX/g' /etc/hosts"
+APPENDIP="echo \"$IP $HOSTPREFIX-$HOSTPOSTFIX\" >> /etc/hosts "
+
+if [ "" == "`cat /etc/hosts | grep $HOSTPREFIX-$HOSTPOSTFIX`" ]; then
+    CMD=$APPENDIP
+else
+    CMD=$SUBSIP
+fi
+
+echo $CMD
+sudo sh -c "$CMD"
+sudo service dnsmasq force-reload
